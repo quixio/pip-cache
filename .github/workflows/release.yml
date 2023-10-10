@@ -1,0 +1,44 @@
+name: Release Charts
+
+on:
+  push:
+    branches:
+      - "main"
+      - "staging"
+env:
+  VERSION: 1.0.0
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    container: quixanalytics/alpine-helm:3.11
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Create folder
+        run: |
+          mkdir -p pip-cache/ && rsync -av --exclude 'pip-cache' ./ pip-cache/
+          helm version
+
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        id: extract_branch    
+
+      - name: Chart | Push
+        uses: appany/helm-oci-chart-releaser@v0.3.0
+        with:
+          name: pip-cache
+          repository: helm
+          tag: ${{env.VERSION}}-${{ steps.extract_branch.outputs.branch }}
+          path: pip-cache
+          registry: quixpublic.azurecr.io
+          registry_username: ${{ secrets.REGISTRY_USERNAME }}
+          registry_password: ${{ secrets.REGISTRY_PASSWORD }}
+          update_dependencies: 'true' 
+          
